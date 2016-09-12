@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 var lastUnreadPosts="0";
+var maxTries = 5;
+var triesCounter = 0;
 
 
 // Called when the user clicks on the browser action.
@@ -12,19 +14,10 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 });
 
 chrome.alarms.onAlarm.addListener(function() {
- loadCredentials();
+ callURL("discussions/withNew", showResults);
 });
 
-function loadCredentials(){
-  chrome.storage.sync.get({
-    tymyUsername: '',
-    tymyPassword: '',
-  }, login);
-}
-
-
 function login(){
-	var deferred = $.Deferred();
 	$.when(getCredentials()).then(function(items){
 		$.ajax({
 			url:"http://brno.tymy.cz/api/login/"+items.tymyUsername+"/"+items.tymyPassword,
@@ -33,7 +26,6 @@ function login(){
 			failure: showErrorForAjaxRequest
 		});
 	});
-	return deferred.promise();
 }
 
 function getCredentials(){
@@ -41,10 +33,16 @@ function getCredentials(){
 }
 
 function callURL(path, callback){
+	if (triesCounter>maxTries){
+		console.log("Max tries reached!");
+		triesCounter = 0;
+		return;
+	}
+	triesCounter++;
 	$.when(getFromLocalStorage("sessionKey")).then(function(sessionKey){
 		if ($.isEmptyObject(sessionKey)){
-			var loginPromise = login();
-			$.when(loginPromise.done(callURLWithSessionKey(path, callback)));
+			login();
+			callURLWithSessionKey(path, callback);
 		}else{
 			callURLWithSessionKey(path, callback);
 		}
@@ -55,15 +53,15 @@ function callURL(path, callback){
 function callURLWithSessionKey(path, callback){
 	$.when(getFromLocalStorage("sessionKey")).then(
 	function(sessionKey){
-		var url = "http://brno.tymy.cz/api/"+path+"?TSID="+sessionKey.sessionKey;
+		var completeURL = "http://brno.tymy.cz/api/"+path+"?TSID="+sessionKey.sessionKey;
 		$.ajax({
-			url: url,
+			url: completeURL,
 			type:'GET'
 		}).then(callback, function(data, textStatus, jqXHR){
 			console.log(data);
 			console.log(textStatus);
 			console.log(jqXHR);
-			console.log("Unable to call URL: "+url)
+			console.log("Unable to call URL: "+completeURL)
 			callURL(path,callback);
 		});
 	});
@@ -78,17 +76,6 @@ function setSessionKey(data){
 	}
 }
 
-function getUnreadCount(){
-	chrome.storage.local.get("sessionKey", function(items){
-			$.ajax({
-			url:"http://brno.tymy.cz/api/discussions/withNew?TSID="+items.sessionKey,
-			type: 'GET',
-			success: showResults,
-			failure: showError
-		});
-	});
-}
-
 function showErrorForAjaxRequest(xhr, ajaxOptions, thrownError){
 	showError(xhr.status, thrownError);
 }
@@ -100,6 +87,8 @@ function showError(title, message){
 
 
 function showResults(data){
+	//success = reset tries counter
+	triesCounter=0;
  	var newPosts = 0;
  	var discussions = data.data;
  	for (i = 0; i<discussions.length; i++){
