@@ -1,0 +1,29 @@
+{
+   "background": {
+      "scripts": [ "background.js", "jquery-2.1.4.min.js" ]
+   },
+   "browser_action": {
+      "default_icon": {
+         "19": "Left_Overs_19x19.png",
+         "38": "Left_Overs_38x38.png"
+      },
+      "default_title": "Left Overs!"
+   },
+   "content_scripts": [ {
+      "js": [ "jquery-2.1.4.min.js", "tymyContent.js" ],
+      "matches": [ "http://*.tymy.cz/*" ]
+   } ],
+   "description": "Watches brno.tymy.cz for new posts.",
+   "icons": {
+      "128": "Left_Overs_128x128.png",
+      "16": "Left_Overs_16x16.png",
+      "48": "Left_Overs_48x48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAleurgUlWllKczFaXkFwPt4LLu9AtOPjRhk0GioHop0TsVs9nFdeSyrVUW2IDQFs0aw/Y7gENg2DntMgBco58By3kgHcNQidYzuOm+ovwrkRhvSW34Crj8izGC+mnC0l50M4lQuz4bRHXXdcdNL0Ghrf1dcWyjAVljSI9xpUldfLt2PQ/VgrTCOT6zKs/dLKZ4G4uZvKud+icRc3ehHFRFsvkfpzMdB7bvnxZ+Ao2PBT4m8vWD7rABKkyS3tGd1WOIe+Oq9JSu088BhBY/0gVT1OsgGZzwwMlxt71jGLLqSSFHsYq0uzUtDOCtinWdJwlSwjz76DtxEmgdcwrhMb5DQIDAQAB",
+   "manifest_version": 2,
+   "name": "brno.tymy.cz watcher",
+   "options_page": "options.html",
+   "permissions": [ "activeTab", "http://brno.tymy.cz/", "alarms", "storage", "notifications", "tabs" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "2.1"
+}
