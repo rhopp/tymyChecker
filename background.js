@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 var lastUnreadPosts="0";
-var maxTries = 5;
+var maxTries = 3;
 var triesCounter = 0;
 
 
@@ -14,16 +14,18 @@ chrome.browserAction.onClicked.addListener(function(tab) {
 });
 
 chrome.alarms.onAlarm.addListener(function() {
- callURL("discussions/withNew", showResults);
+	callURL("discussions/withNew", showResults);
 });
 
-function login(){
+function login(path, callback){
 	$.when(getCredentials()).then(function(items){
 		$.ajax({
 			url:"http://brno.tymy.cz/api/login/"+items.tymyUsername+"/"+items.tymyPassword,
 			type:'GET',
-			success: setSessionKey,
-			failure: showErrorForAjaxRequest
+			success: function(data){
+					setSessionKey(data, path, callback);
+				},
+			error: showErrorForAjaxRequest
 		});
 	});
 }
@@ -36,41 +38,45 @@ function callURL(path, callback){
 	if (triesCounter>maxTries){
 		console.log("Max tries reached!");
 		triesCounter = 0;
+		chrome.storage.local.remove("sessionKey");
 		return;
 	}
 	triesCounter++;
 	$.when(getFromLocalStorage("sessionKey")).then(function(sessionKey){
 		if ($.isEmptyObject(sessionKey)){
-			login();
-			callURLWithSessionKey(path, callback);
+			login(path, callback);
+			//callURLWithSessionKey(path, callback);
 		}else{
-			callURLWithSessionKey(path, callback);
+			callURLWithSessionKey(path, callback, sessionKey);
 		}
 	});
 }
 
 //this function expects sessionKey to be present. It does not have to be valid.
-function callURLWithSessionKey(path, callback){
-	$.when(getFromLocalStorage("sessionKey")).then(
-	function(sessionKey){
-		var completeURL = "http://brno.tymy.cz/api/"+path+"?TSID="+sessionKey.sessionKey;
-		$.ajax({
-			url: completeURL,
-			type:'GET'
-		}).then(callback, function(data, textStatus, jqXHR){
+function callURLWithSessionKey(path, callback, sessionKey){
+	var completeURL = "http://brno.tymy.cz/api/"+path+"?TSID="+sessionKey.sessionKey;
+	$.ajax({
+		url: completeURL,
+		type:'GET',
+		success: callback,
+		error: function(data){
+			//Call to URL was somehow unsuccessful. Log the attempt and try to login again (to get fresh TSID)
+			console.log("Unable to call url: "+completeURL);
 			console.log(data);
-			console.log(textStatus);
-			console.log(jqXHR);
-			console.log("Unable to call URL: "+completeURL)
-			callURL(path,callback);
-		});
+			console.log("Trying to login again to gain new TSID");
+			login(path, callback);
+		}
 	});
 }
 
-function setSessionKey(data){
+function setSessionKey(data, path, callback){
 	if (data.status == "OK"){
-		console.log("Setting sessionKey");
-		chrome.storage.local.set({"sessionKey": data.sessionKey});
+		console.log("Setting sessionKey: ");
+		console.log(data);
+		chrome.storage.local.set({"sessionKey": data.sessionKey}, function(){
+			//sessionKey is fresh -> now we can call the URL again
+			callURL(path, callback);
+		});
 	}else{
 		showError(data.status, data.statusMessage);
 	}
