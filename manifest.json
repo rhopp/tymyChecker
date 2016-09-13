@@ -25,5 +25,5 @@
    "options_page": "options.html",
    "permissions": [ "activeTab", "http://brno.tymy.cz/", "alarms", "storage", "notifications", "tabs" ],
    "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "2.1"
+   "version": "2.1.1"
 }
